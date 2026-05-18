@@ -1,0 +1,40 @@
+name: security-audit
+# Auto-managed by ~/.local/bin/gh-harden-repos.sh. Do not hand-edit.
+#
+# Blocks CI on known dependency advisories so a vulnerable package
+# cannot land unnoticed (the failure mode behind Dependabot alerts
+# sitting in a dashboard nobody reads). The weekly run catches
+# advisories newly disclosed against already-pinned deps, where no
+# commit is needed for the repo to become vulnerable.
+#
+# npm: threshold is `high`, so high and critical fail the build while
+# moderate and low stay with Dependabot PRs and the gate is signal,
+# not noise.
+# pip: a genuinely unfixable advisory can be waived with
+# `--ignore-vuln <GHSA-id>` and a justifying comment, never by deleting
+# this gate.
+#
+# No untrusted input is interpolated into any run: step.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 13 * * 1'   # Mondays 13:00 UTC
+  workflow_dispatch:
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: npm audit (block on high + critical)
+        run: |
+          if [ ! -f package-lock.json ] && [ ! -f npm-shrinkwrap.json ]; then
+            npm install --package-lock-only --ignore-scripts
+          fi
+          npm audit --audit-level=high
