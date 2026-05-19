@@ -14,5 +14,11 @@
     "@whiskeysockets/baileys": "^6.7.0",
     "pino": "^9.0.0",
     "qrcode-terminal": "^0.12.0"
+  },
+  "comments": {
+    "overrides": "protobufjs pinned to 8.x: the WhatsApp signal stack (baileys -> @whiskeysockets/libsignal-node) pulls protobufjs <=7.5.5, which carries a critical arbitrary-code-execution advisory (GHSA-xq3m-2v4x-88gg) plus 6 more. No patched 7.x exists; 8.x is the fixed line. npm audit fix --force cannot resolve it. Remove this override once libsignal-node ships a protobufjs-8 release."
+  },
+  "overrides": {
+    "protobufjs": "^8.4.0"
   }
 }
