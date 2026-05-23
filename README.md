@@ -1,5 +1,18 @@
 # whatsapp-vault-sync
 
+
+<!-- mycelium-badges:start -->
+
+<p>
+  <a href="https://github.com/adelaidasofia/whatsapp-vault-sync/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/adelaidasofia/whatsapp-vault-sync?color=blue"></a>
+  <a href="https://github.com/adelaidasofia/whatsapp-vault-sync/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/adelaidasofia/whatsapp-vault-sync?color=eab308"></a>
+  <a href="https://github.com/adelaidasofia/whatsapp-vault-sync/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/adelaidasofia/whatsapp-vault-sync"></a>
+  <a href="https://github.com/adelaidasofia/whatsapp-vault-sync/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/adelaidasofia/whatsapp-vault-sync"></a>
+  <a href="https://myceliumai.co"><img alt="Built by Mycelium AI" src="https://img.shields.io/badge/built_by-Mycelium_AI-15B89A"></a>
+</p>
+
+<!-- mycelium-badges:end -->
+
 One QR scan → your entire WhatsApp history in Obsidian markdown.
 
 Connects via the WhatsApp Web protocol (same as [WhatsApp Web](https://web.whatsapp.com)). Pulls full chat history, writes one searchable markdown file per contact, and keeps everything current with incremental re-runs. No manual per-chat exports. No third-party servers.
