@@ -3,9 +3,19 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Export your personal WhatsApp history to Obsidian markdown via QR scan",
-  "keywords": ["whatsapp", "obsidian", "baileys", "pkm", "second-brain", "markdown", "vault"],
+  "keywords": [
+    "whatsapp",
+    "obsidian",
+    "baileys",
+    "pkm",
+    "second-brain",
+    "markdown",
+    "vault"
+  ],
   "license": "MIT",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "sync": "node sync.mjs",
     "sync:groups": "node sync.mjs --groups"
@@ -19,6 +29,7 @@
     "overrides": "protobufjs pinned to 8.x: the WhatsApp signal stack (baileys -> @whiskeysockets/libsignal-node) pulls protobufjs <=7.5.5, which carries a critical arbitrary-code-execution advisory (GHSA-xq3m-2v4x-88gg) plus 6 more. No patched 7.x exists; 8.x is the fixed line. npm audit fix --force cannot resolve it. Remove this override once libsignal-node ships a protobufjs-8 release."
   },
   "overrides": {
-    "protobufjs": "^8.4.0"
+    "protobufjs": "^8.6.0",
+    "ws": "^8.21.0"
   }
 }
