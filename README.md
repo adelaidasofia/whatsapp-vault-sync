@@ -184,7 +184,7 @@ Terminal needs Contacts permission: System Settings › Privacy & Security › C
 
 ## Part of the ai-brain-starter ecosystem
 
-This tool is designed to work alongside [ai-brain-starter](https://github.com/adelaidasofia/ai-brain-starter) — a full operating system for Claude Code with memory, journaling, knowledge graphs, and pattern recognition. WhatsApp chats land in the same vault structure, become part of the same knowledge graph, and are searchable by Claude alongside your journals and notes.
+This tool is designed to work alongside [ai-brain-starter](https://github.com/mycelium-hq/ai-brain-starter) — a full operating system for Claude Code with memory, journaling, knowledge graphs, and pattern recognition. WhatsApp chats land in the same vault structure, become part of the same knowledge graph, and are searchable by Claude alongside your journals and notes.
 
 ---
 
