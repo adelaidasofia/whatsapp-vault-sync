@@ -18,12 +18,22 @@ Usage:
 """
 
 import os
+import platform
 import re
 import sys
 import subprocess
 import tempfile
 import argparse
 from pathlib import Path
+
+# macOS only: contact resolution reads Contacts.app via a Swift snippet.
+# Fail with a clear message instead of a FileNotFoundError traceback when
+# `swift` is missing (Windows/Linux). sync.mjs itself runs on any OS.
+if platform.system() != "Darwin":
+    print("rename-contacts.py is macOS-only (it reads Contacts.app via Swift).")
+    print("The sync itself (sync.mjs) works on any OS — this optional step just")
+    print("renames +phone-number files to contact names using macOS Contacts.")
+    sys.exit(1)
 
 # ── Args ──────────────────────────────────────────────────────────────────────
 
@@ -110,7 +120,11 @@ def lookup(digits: str) -> str | None:
 # ── Rename and update files ───────────────────────────────────────────────────
 
 def sanitize(name: str) -> str:
-    return re.sub(r'[/\\?%*:|"<>\[\]]', "-", name).strip()
+    s = re.sub(r'[/\\?%*:|"<>\[\]]', "-", name).strip()
+    s = re.sub(r"[. ]+$", "", s)  # Windows forbids trailing dots/spaces
+    if re.fullmatch(r"(?i)CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]", s):
+        s += "_"  # Windows reserved device names
+    return s or "Unknown"
 
 matched, unmatched = 0, 0
 

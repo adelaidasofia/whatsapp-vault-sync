@@ -70,9 +70,9 @@ YAML frontmatter makes every chat queryable with Dataview, searchable with Smart
 
 ## Requirements
 
-- **Node.js 18+** — [nodejs.org](https://nodejs.org)
-- **An iPhone or Android** with WhatsApp installed
-- **macOS** for contact name resolution (`rename-contacts.py`). The sync itself (`sync.mjs`) works on any OS.
+- **Node.js 20+** — [nodejs.org](https://nodejs.org) (Baileys, the WhatsApp Web library underneath, refuses to install on anything older)
+- **An iPhone or Android** with WhatsApp installed — QR scan and pairing code both work on either
+- **Windows, macOS, or Linux.** The sync (`sync.mjs`) runs on all three. The optional contact-name resolution step (`rename-contacts.py`) is macOS-only
 
 ---
 
@@ -84,31 +84,68 @@ cd whatsapp-vault-sync
 npm install
 ```
 
+Same on every OS (run it in PowerShell on Windows).
+
 ---
 
 ## First sync
 
 ```bash
-VAULT_ROOT="/path/to/your/vault" node sync.mjs
+node sync.mjs --vault "/path/to/your/vault"
 ```
 
-1. A QR code appears in the terminal
+On Windows, same command with a Windows path:
+
+```powershell
+node sync.mjs --vault "C:\Users\you\Documents\MyVault"
+```
+
+1. A QR code appears in the terminal — it refreshes in place every ~20 s, and the one on screen is always the valid one
 2. On your phone: **Settings › Linked Devices › Link a Device**
 3. Scan the code
 4. Wait — WhatsApp delivers history in chunks. Large histories take a few minutes
 5. Script exits when done. Files are in `<vault>/🤖 AI Chats/WhatsApp/`
 
-Change the output folder:
+Prefer the `VAULT_ROOT` environment variable? All three shells work:
 
 ```bash
-VAULT_ROOT="/path/to/vault" WA_OUTPUT="Chats/WhatsApp" node sync.mjs
+# macOS / Linux
+VAULT_ROOT="/path/to/vault" node sync.mjs
+```
+
+```powershell
+# Windows PowerShell
+$env:VAULT_ROOT="C:\path\to\vault"; node sync.mjs
+```
+
+```bat
+:: Windows cmd.exe
+set VAULT_ROOT=C:\path\to\vault && node sync.mjs
+```
+
+Change the output folder (default `🤖 AI Chats/WhatsApp`):
+
+```bash
+WA_OUTPUT="Chats/WhatsApp" node sync.mjs --vault "/path/to/vault"
 ```
 
 Include group chats:
 
 ```bash
-VAULT_ROOT="/path/to/vault" node sync.mjs --groups
+node sync.mjs --vault "/path/to/vault" --groups
 ```
+
+---
+
+## Link by code instead of QR (`--pair`)
+
+Can't scan a QR — remote machine, screen reader, or a terminal that renders it badly? Link with a code instead:
+
+```bash
+node sync.mjs --vault "/path/to/vault" --pair +15551234567
+```
+
+Use your own phone number in international format. The terminal prints an 8-character code; on your phone: **Settings › Linked Devices › Link a Device › "Link with phone number instead"**, then type the code. Works identically on iPhone and Android.
 
 ---
 
@@ -117,7 +154,7 @@ VAULT_ROOT="/path/to/vault" node sync.mjs --groups
 Run the same command any time. The session is saved in `baileys_auth/` so no QR scan is needed. Only messages since the last sync are fetched. Existing files are updated in place.
 
 ```bash
-VAULT_ROOT="/path/to/vault" node sync.mjs
+node sync.mjs --vault "/path/to/vault"
 # Connected. Receiving history...
 #   History: 547 chats | +23 messages
 # Done. 3 conversations updated.
@@ -136,10 +173,10 @@ System Settings › Privacy & Security › Contacts › enable Terminal
 **2. Run the rename script**
 
 ```bash
-VAULT_ROOT="/path/to/vault" python3 rename-contacts.py
+python3 rename-contacts.py --vault "/path/to/vault"
 ```
 
-This renames the files, updates `contact:` in the frontmatter, and fixes sender names in every message line. Safe to re-run — already-named files are left alone.
+This renames the files, updates `contact:` in the frontmatter, and fixes sender names in every message line. Safe to re-run — already-named files are left alone. On Windows and Linux the script exits with a note instead of a traceback; the sync itself never needs it.
 
 ---
 
@@ -156,10 +193,13 @@ On first connect with `syncFullHistory: true`, WhatsApp pushes your message hist
 ## Troubleshooting
 
 **QR code expired before I could scan**
-The code refreshes automatically every ~20 seconds. Keep the terminal visible and scan the next one.
+The code refreshes in place every ~20 seconds — the QR on screen is always the current one. Scan whatever is showing.
+
+**QR code looks garbled (Windows)**
+Legacy Windows consoles render the compact QR glyphs incorrectly. The script already falls back to a larger block style outside Windows Terminal; if it still looks wrong, use [Windows Terminal](https://aka.ms/terminal) or skip the QR entirely with `--pair +yourphonenumber`.
 
 **"Logged out of WhatsApp" after re-running**
-WhatsApp limits linked devices to 4. If you've exceeded that, unlink an old device in WhatsApp › Settings › Linked Devices, then delete `baileys_auth/` and run again.
+WhatsApp unlinked this session (device limit, expiry, or a manual unlink). The script now clears the stale `baileys_auth/` folder itself — just run the same command again and link fresh. WhatsApp limits linked devices to 4; if you're at the limit, unlink an old device in WhatsApp › Settings › Linked Devices first.
 
 **Files still named as phone numbers after renaming**
 The number isn't saved in your macOS Contacts. Save it there and re-run `rename-contacts.py`.
@@ -176,7 +216,7 @@ Terminal needs Contacts permission: System Settings › Privacy & Security › C
 
 | File | Purpose | Delete to... |
 |------|---------|-------------|
-| `baileys_auth/` | WhatsApp session credentials | Force re-scan QR on next run |
+| `baileys_auth/` | WhatsApp session credentials | Force re-scan QR on next run (auto-cleared if WhatsApp logs the session out) |
 | `baileys_store.json` | Accumulated message cache | Reset to full re-sync |
 | `.last_sync` | Timestamp of last run | No effect on sync |
 
