@@ -19,7 +19,7 @@
   "scripts": {
     "sync": "node sync.mjs",
     "sync:groups": "node sync.mjs --groups",
-    "test": "node --test \"test/**/*.test.mjs\""
+    "test": "node --test test/sync.test.mjs"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.23",
