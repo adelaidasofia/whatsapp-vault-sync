@@ -35,9 +35,44 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
-      - name: npm audit (block on high + critical)
+      - name: npm audit (block on high + critical, honour explicit waivers)
         run: |
           if [ ! -f package-lock.json ] && [ ! -f npm-shrinkwrap.json ]; then
             npm install --package-lock-only --ignore-scripts
           fi
-          npm audit --audit-level=high
+          # A genuinely unfixable advisory is waived BY ID in
+          # .github/npm-audit-waivers.txt with a justifying comment -- never by
+          # deleting this gate and never by lowering --audit-level. Same
+          # contract the pip lane gets from `pip-audit --ignore-vuln <GHSA-id>`;
+          # npm audit has no native equivalent, so the waiver is applied here.
+          npm audit --json > /tmp/npm-audit.json 2>/dev/null || true
+          # Unparseable output is NOT green. A gate that cannot read its own
+          # result must fail closed, or "audit did not run" reads as "audit clean".
+          if ! jq -e 'type == "object"' /tmp/npm-audit.json >/dev/null 2>&1; then
+            echo "::error::npm audit produced no parseable JSON -- refusing to report green"
+            exit 1
+          fi
+          jq -r '
+            (.vulnerabilities // {}) | to_entries[] | .value
+            | select(.severity == "high" or .severity == "critical")
+            | .via[]? | select(type == "object") | .url // empty
+          ' /tmp/npm-audit.json | sed 's#.*/##' | sort -u > /tmp/npm-audit-found.txt
+          : > /tmp/npm-audit-waived.txt
+          if [ -f .github/npm-audit-waivers.txt ]; then
+            sed -e 's/#.*//' -e 's/[[:space:]]//g' .github/npm-audit-waivers.txt \
+              | grep -v '^$' | sort -u > /tmp/npm-audit-waived.txt
+          fi
+          unwaived=$(comm -23 /tmp/npm-audit-found.txt /tmp/npm-audit-waived.txt)
+          if [ -n "$unwaived" ]; then
+            echo "::error::Unwaived high/critical npm advisories present:"
+            printf '  %s\n' $unwaived
+            echo "--- full report ---"
+            npm audit --audit-level=high || true
+            exit 1
+          fi
+          if [ -s /tmp/npm-audit-waived.txt ]; then
+            echo "npm audit: clean apart from explicitly waived advisories:"
+            sed 's/^/  /' /tmp/npm-audit-waived.txt
+          else
+            echo "npm audit: no high or critical advisories."
+          fi
