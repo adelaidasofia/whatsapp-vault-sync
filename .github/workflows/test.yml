@@ -18,5 +18,18 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - run: npm ci || npm install
+      # npm ci ONLY -- no `|| npm install` fallback. npm ci fails exactly when
+      # package-lock.json and package.json disagree; falling back to npm install
+      # then re-resolves and CI goes green having tested a DIFFERENT dependency
+      # tree than the one committed, which silently defeats security pins added
+      # via `overrides`. Fail loud instead: a desynced lockfile is a real defect.
+      # A repo with no lockfile is handled by the explicit branch below.
+      - name: Install dependencies (lockfile is authoritative)
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "::warning::No lockfile committed; resolving fresh. Commit package-lock.json so CI tests the pinned tree."
+            npm install
+          fi
       - run: npm test --if-present
