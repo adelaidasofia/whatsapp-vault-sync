@@ -40,8 +40,8 @@ jobs:
   npm-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
       - name: npm audit (block on high + critical, honour explicit waivers)
@@ -75,6 +75,35 @@ jobs:
           if [ -n "$unwaived" ]; then
             echo "::error::Unwaived high/critical npm advisories present:"
             printf '  %s\n' $unwaived
+            echo "--- full report ---"
+            npm audit --audit-level=high || true
+            exit 1
+          fi
+          # TOTAL-blindness cross-check. Read the scope literally, it is narrow.
+          #
+          # CATCHES: npm counts >=1 high/critical while the extraction above
+          # produced NOTHING AT ALL. Two ways that happens, both measured: the
+          # extraction jq itself errors (e.g. `.vulnerabilities` is a string or
+          # an array) and its failure is invisible, because the pipeline's exit
+          # status is `sort`'s so `set -e` never fires; or every high/critical
+          # entry carries only STRING `via` values, which is how an advisory
+          # inherited through a parent package appears and which contributes no
+          # URL. Either way every check below reads the tree as clean.
+          #
+          # DOES NOT CATCH a PARTIAL miss. The predicate is "found list empty",
+          # not "this advisory is accounted for", so ONE extractable URL
+          # anywhere in the set silences it -- including an unrelated or
+          # already-waived one. Per-entry reconciliation is OND-1598. Do not
+          # read a green here as proof every high/critical was accounted for.
+          #
+          # Counts are deliberately NOT compared for equality: metadata counts
+          # PACKAGE entries while the found list holds unique advisory ids, and
+          # the two legitimately differ, so equality would red on healthy trees.
+          # 15 inputs were checked for a false red on a healthy tree; none found.
+          meta_hc=$(jq -r '((.metadata.vulnerabilities.high // 0) + (.metadata.vulnerabilities.critical // 0))' /tmp/npm-audit.json 2>/dev/null || echo 0)
+          case "$meta_hc" in ''|*[!0-9]*) meta_hc=0 ;; esac
+          if [ "$meta_hc" -gt 0 ] && [ ! -s /tmp/npm-audit-found.txt ]; then
+            echo "::error::npm audit counts $meta_hc high/critical package entries but the advisory extraction returned none -- refusing to report green"
             echo "--- full report ---"
             npm audit --audit-level=high || true
             exit 1
