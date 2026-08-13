@@ -61,6 +61,28 @@ jobs:
             echo "::error::npm audit produced no parseable JSON -- refusing to report green"
             exit 1
           fi
+          # FAIL-OPEN CLOSED. A registry/network failure does NOT produce
+          # unparseable output -- `npm audit --json` emits a well-formed OBJECT
+          # carrying `error`/`message` and NO `.metadata`. That satisfies the
+          # type check above, makes `.vulnerabilities` empty, and computes
+          # meta_hc=0, so every check below reads the tree as clean and the job
+          # prints "no high or critical advisories" and exits 0. "Audit could
+          # not run" then renders identically to "audit is clean" -- the worst
+          # failure mode a security gate has, because it manufactures
+          # confidence instead of withholding it. Measured, not theorised:
+          # `npm audit --json --registry=http://127.0.0.1:9` reproduces it.
+          # Two shapes must hold before any green below is trusted.
+          if jq -e 'has("error")' /tmp/npm-audit.json >/dev/null 2>&1; then
+            echo "::error::npm audit could not complete (registry or network failure) -- refusing to report green"
+            jq -r '.error.summary? // .error.detail? // .error? // .message? // empty' /tmp/npm-audit.json | head -5
+            exit 1
+          fi
+          # A real audit always reports counts. No .metadata.vulnerabilities
+          # means the tree was never actually audited, whatever else is present.
+          if ! jq -e '.metadata.vulnerabilities | type == "object"' /tmp/npm-audit.json >/dev/null 2>&1; then
+            echo "::error::npm audit output carries no .metadata.vulnerabilities -- cannot prove the tree was audited, refusing to report green"
+            exit 1
+          fi
           jq -r '
             (.vulnerabilities // {}) | to_entries[] | .value
             | select(.severity == "high" or .severity == "critical")
